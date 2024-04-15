@@ -6,7 +6,6 @@ import os
 from PIL import Image
 from utils.general_utils import project_points_3D_to_2D, vector_to_heatmaps
 import cv2 as cv2
-import torchvision
 import random
 from torch.utils.data import DataLoader
 
@@ -39,22 +38,19 @@ class H2O_Dataset_hand_train_3D(Dataset):
             0:max_samples]
         self.img_size = config.img_size
         self.albu_transform = albu_transform
-        self.data_dimension = "2D"
+
         self.depth_img_type = config.depth_img_type
         self.use_depth = config.use_depth
         if self.subset_type == "train":
             self.segment_list = config.segment_list
         else:
             self.segment_list = config.segment_list_val
-        # self.used_masked = True
-        self.transform2depth = torchvision.transforms.Resize(size=(384, 384))
+
         self.heatmap_dim = 56 if self.img_size[0] == 224 else 128 if self.img_size[0] == 512 else None
 
-        base_path = "/data/wmucha/datasets/h2o_ego/h2o_ego"
+        base_path = os.path.join(config.path, config.imgs_path)
         self.imgs_paths = [os.path.join(base_path, path[0])
                            for path in self.imgs_paths]
-        self.mask_transform = torchvision.transforms.Resize(size=(128, 128))
-        self.two_stream = config.two_streams
 
         hand_pose_pths = [path.replace("rgb", "hand_pose").replace(
             ".png", ".txt") for path in self.imgs_paths]
@@ -69,7 +65,6 @@ class H2O_Dataset_hand_train_3D(Dataset):
             left_hand_flag_temp_list.append(left_hand_flag_temp)
             right_hand_flag_temp_list.append(right_hand_flag_temp)
 
-        self.hand_pose_pths = np.array(hand_pose_pths)
         self.hand_pose2D = np.array(hand_pose_list)
         self.hand_pose3D = np.array(hand_pose3D_list)
         self.left_hand_flag = np.array(left_hand_flag_temp_list)
@@ -137,15 +132,8 @@ class H2O_Dataset_hand_train_3D(Dataset):
         vertical_flip_flag = False
         if self.albu_transform:
 
-            if self.two_stream:
-                transformed = self.albu_transform(
-                    image=img, keypoints=hand_pose, mask=img_depth)
-                img_depth = transformed['mask'] / 255.0
-                img_depth = img_depth.reshape(
-                    1, self.img_size[0], self.img_size[1])
-            else:
-                transformed = self.albu_transform(
-                    image=img, keypoints=hand_pose)
+            transformed = self.albu_transform(
+                image=img, keypoints=hand_pose)
 
             img = transformed['image']
             keypoints = np.array(transformed['keypoints'])

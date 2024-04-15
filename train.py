@@ -9,6 +9,8 @@ from utils.general_utils import make_optimiser, freeze_seeds, set_max_cpu_thread
 from utils import loses
 from datasets.h2o import get_h2o_dataloaders
 from models.models import make_model
+from spock import SpockBuilder
+import albumentations as A
 
 
 def main() -> None:
@@ -97,7 +99,7 @@ def main() -> None:
         optimiser, milestones=[50, 60, 70, 80, 90, 100], gamma=0.5, last_epoch=- 1, verbose=True)
 
     trainer = Trainer3D(model, criterion, optimiser,
-                        cfg.TrainingConfig, wandb_logger=logger, grad_clip=cfg.TrainingConfig.grad_clipping, scheduler=scheduler)
+                        cfg.TrainingConfig, wandb_logger=logger, scheduler=scheduler)
 
     print(f'Starting training on device: {cfg.TrainingConfig.device}')
 

@@ -1,41 +1,11 @@
 from models.backbones import BackboneModel
-import numpy as np
-from torch import nn
 import torch.nn as nn
-import numpy as np
-import numpy as np
 import torch
-from utils.general_utils import heatmaps_to_coordinates_tensor
-
-CAM_INTRS = np.array([[636.6593017578125, 0.00000000e+00, 635.283881879317],
-                      [0.00000000e+00, 636.251953125, 366.8740353496978],
-                      [0.00000000e+00, 0.00000000e+00, 1.0]])
+from utils.general_utils import heatmaps_to_coordinates_tensor, project_points_2D_to_3D
+from datasets.h2o import CAM_INTRS
 
 
-def project_points_2D_to_3D(xyz: torch.Tensor, K: torch.Tensor) -> torch.Tensor:
-    """
-    Projects 2D coordinates into 3D space.
-
-    Args:
-        xyz (torch.Tensor): 2D keypoints and estimated depth in batches
-        K (torch.Tensor): camera intrinsic
-
-    Returns:
-        torch.Tensor: 3D keypoints in batches
-    """
-    xy = xyz[:, :, :-1]
-    z = xyz[:, :, -1:]
-    ones = torch.ones((xy.shape[0], xy.shape[1], 1),
-                      device=xy.device, dtype=xy.dtype)
-    xy = torch.cat((xy, ones), dim=-1)
-    K_inv = torch.inverse(K).to(xy.device).to(xy.dtype)
-    xyz = torch.matmul(K_inv.unsqueeze(
-        0), xy.transpose(-2, -1)).transpose(-2, -1)
-    xyz *= z
-    return xyz
-
-
-class DeconvolutionLayer2(nn.Module):
+class DeconvolutionLayer(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 2, stride: int = 2, padding=0, last=False) -> None:
 
@@ -61,16 +31,16 @@ class DeconvolutionLayer2(nn.Module):
         return out
 
 
-class SimpleHead50(nn.Module):
+class Upsampler(nn.Module):
     def __init__(self, in_channels=1280, out_channels=21) -> None:
         super().__init__()
 
-        self.deconv1 = DeconvolutionLayer2(
+        self.deconv1 = DeconvolutionLayer(
             in_channels=in_channels, out_channels=256)
-        self.deconv2 = DeconvolutionLayer2(in_channels=256, out_channels=256)
-        self.deconv3 = DeconvolutionLayer2(in_channels=256, out_channels=256)
-        self.deconv4 = DeconvolutionLayer2(in_channels=256, out_channels=256)
-        self.deconv5 = DeconvolutionLayer2(
+        self.deconv2 = DeconvolutionLayer(in_channels=256, out_channels=256)
+        self.deconv3 = DeconvolutionLayer(in_channels=256, out_channels=256)
+        self.deconv4 = DeconvolutionLayer(in_channels=256, out_channels=256)
+        self.deconv5 = DeconvolutionLayer(
             in_channels=256, out_channels=256, last=True)
 
         self.final = torch.nn.Conv2d(
@@ -89,7 +59,7 @@ class SimpleHead50(nn.Module):
         return x
 
 
-class CustomEgocentric3D_zsep(nn.Module):
+class EffHandEgoNet3D(nn.Module):
     def __init__(self, handness_in: int = 81920, handness_out: int = 2, *args, **kwargs) -> None:
         """Initilise the model
         Args:
@@ -108,8 +78,8 @@ class CustomEgocentric3D_zsep(nn.Module):
             in_features=dim, out_features=handness_out)
         self.pooling = nn.MaxPool2d(2)
 
-        self.left_pose = SimpleHead50()
-        self.right_pose = SimpleHead50()
+        self.left_pose = Upsampler()
+        self.right_pose = Upsampler()
 
         self.z_estimation_l = nn.Linear(in_features=dim, out_features=21)
         self.z_estimation_r = nn.Linear(in_features=dim, out_features=21)

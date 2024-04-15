@@ -1,22 +1,18 @@
 # H2oHandsData:
 path: '/data/wmucha/datasets'
-dataset: 'H2O'
-use_cache: True
+imgs_path: 'h2o_ego/h2o_ego'
 batch_size: 1
 img_size: [512,512]
 norm_mean: [0.485, 0.456, 0.406]
 norm_std: [0.229, 0.224, 0.225]
 use_depth: True
-two_streams: False
 depth_img_type: 'est_low'
 segment_list: [0,120]
 segment_list_val: [120]
 # max_train_samples: 100
 # max_val_samples: 100
-
 # TrainingConfig:
 seed: 37
-data_type: '3D'
 experiment_name: '3DHPDSEG'
 device: 7
 lr: 0.1
@@ -24,10 +20,9 @@ max_epochs: 500
 early_stopping: 13
 weight_decay: 0.0
 momentum: 0.9
-grad_clipping: 0.0
-criterion: 'EffHandEgoNetLoss3D_seperate'
+criterion: 'EffHandEgoNetLoss3D'
 num_workers: 6
 load_model: False
 load_model_path: 'checkpoints/peachy-waterfall-101/checkpoint_best.pth'
-model_type: 'CustomEgocentric3D_zsep'
+model_type: 'EffHandEgoNet3D'
 debug: True

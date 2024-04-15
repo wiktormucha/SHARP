@@ -60,7 +60,7 @@ class IoULoss(nn.Module):
         return 1 - iou
 
 
-class EffHandEgoNetLoss3D_seperate(nn.Module):
+class EffHandEgoNetLoss3D(nn.Module):
     """
     This class defines the loss function for the EffHandEgoNet model.
 
@@ -81,7 +81,7 @@ class EffHandEgoNetLoss3D_seperate(nn.Module):
         Returns:
         - None
         """
-        super(EffHandEgoNetLoss3D_seperate, self).__init__()
+        super(EffHandEgoNetLoss3D, self).__init__()
 
         self.handness = nn.CrossEntropyLoss()
         self.iou = IoULoss()

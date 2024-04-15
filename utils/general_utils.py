@@ -70,22 +70,44 @@ def project_points_3D_to_2D(xyz: np.array, K: np.array) -> np.array:
     return uv[:, :2] / uv[:, -1:]
 
 
-def project_points_2D_to_3D(xy: np.array, z: np.array, K: list) -> np.array:
+# def project_points_2D_to_3D(xy: np.array, z: np.array, K: list) -> np.array:
+#     """
+#     Projects 2D coordinates into 3D space.
+
+#     Args:
+#         xy (np.array): 2D keypoints
+#         z (np.array): estimated depth
+#         K (list): camera intrinsic
+
+#     Returns:
+#         np.array: 3D keypoints
+#     """
+#     xy = np.concatenate((xy, np.ones((xy.shape[0], 1))), axis=-1)
+#     K_inv = np.linalg.inv(np.array(K))
+#     xyz = np.matmul(K_inv, xy.T).T
+#     xyz *= z.reshape(21, 1)
+#     return xyz
+
+def project_points_2D_to_3D(xyz: torch.Tensor, K: torch.Tensor) -> torch.Tensor:
     """
     Projects 2D coordinates into 3D space.
 
     Args:
-        xy (np.array): 2D keypoints
-        z (np.array): estimated depth
-        K (list): camera intrinsic
+        xyz (torch.Tensor): 2D keypoints and estimated depth in batches
+        K (torch.Tensor): camera intrinsic
 
     Returns:
-        np.array: 3D keypoints
+        torch.Tensor: 3D keypoints in batches
     """
-    xy = np.concatenate((xy, np.ones((xy.shape[0], 1))), axis=-1)
-    K_inv = np.linalg.inv(np.array(K))
-    xyz = np.matmul(K_inv, xy.T).T
-    xyz *= z.reshape(21, 1)
+    xy = xyz[:, :, :-1]
+    z = xyz[:, :, -1:]
+    ones = torch.ones((xy.shape[0], xy.shape[1], 1),
+                      device=xy.device, dtype=xy.dtype)
+    xy = torch.cat((xy, ones), dim=-1)
+    K_inv = torch.inverse(K).to(xy.device).to(xy.dtype)
+    xyz = torch.matmul(K_inv.unsqueeze(
+        0), xy.transpose(-2, -1)).transpose(-2, -1)
+    xyz *= z
     return xyz
 
 

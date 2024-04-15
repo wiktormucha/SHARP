@@ -1,11 +1,13 @@
 from utils.trainer import Trainer3D
 from spock_dataclasses import *
 from albumentations.pytorch.transforms import ToTensorV2
-from utils.general_utils import make_model, make_optimiser
+from utils.general_utils import make_optimiser
 from utils import loses
 from utils.general_utils import freeze_seeds, set_max_cpu_threads
 from datasets.h2o import get_h2o_dataloaders
-
+from spock import SpockBuilder
+import albumentations as A
+from models.models import make_model
 
 def main() -> None:
 
@@ -37,7 +39,7 @@ def main() -> None:
     criterion = getattr(loses, cfg.TrainingConfig.criterion)()
     optimiser = make_optimiser(model=model, training_cfg=cfg.TrainingConfig)
     trainer = Trainer3D(model, criterion, optimiser,
-                        cfg.TrainingConfig, wandb_logger=None, grad_clip=cfg.TrainingConfig.grad_clipping)
+                        cfg.TrainingConfig, wandb_logger=None)
 
     print('Testing model on validation:')
     trainer.test(val_dataloader)
