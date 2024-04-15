@@ -1,33 +1,10 @@
-from models.backbones import BackboneModel_FPN, BackboneModel, ConvBlock, HighLowFeauturesBck, BackboneModel_FPN, BackboneModel, ConvBlock, HighLowFeauturesBck, BackboneModel_Depth
-from models.heads import WaterfallEgo, Encoder_Ego, SimpleHead_FPN, SimpleHead5, PredictionHead, SimpleHead_trans, Waterfall, DeconvolutionLayer, Encoder, SimpleUsampleSingleHand
-import torch
+from models.backbones import BackboneModel
+import numpy as np
+from torch import nn
 import torch.nn as nn
-import sys
-import torchvision
-import random
+import numpy as np
 import numpy as np
 import torch
-import torch.nn as nn
-import copy
-import math
-from typing import Optional, List
-import torch
-import torch.nn.functional as F
-from torch import nn, Tensor
-from torch.autograd import Variable
-from models.backbones import BackboneModel_FPN, BackboneModel, ConvBlock, HighLowFeauturesBck, BackboneModel_FPN, BackboneModel, ConvBlock, HighLowFeauturesBck, BackboneModel_Depth
-from models.heads import WaterfallEgo, Encoder_Ego, SimpleHead_FPN, SimpleHead5, PredictionHead, SimpleHead_trans, Waterfall, DeconvolutionLayer, Encoder, SimpleUsampleSingleHand
-import torch
-import torch.nn as nn
-import sys
-import torchvision
-import random
-import numpy as np
-import torch
-import torch.nn as nn
-import torchvision
-from torchvision.models import EfficientNet_V2_S_Weights
-import numpy as np
 
 CAM_INTRS = np.array([[636.6593017578125, 0.00000000e+00, 635.283881879317],
                       [0.00000000e+00, 636.251953125, 366.8740353496978],
@@ -153,7 +130,6 @@ class CustomEgocentric3D_zsep(nn.Module):
         super().__init__(*args, **kwargs)
 
         self.backbone = BackboneModel()
-        # self.backbone = BackboneModel_Depth()
 
         self.left_hand = nn.Linear(
             in_features=dim, out_features=handness_out)
@@ -166,7 +142,6 @@ class CustomEgocentric3D_zsep(nn.Module):
 
         self.z_estimation_l = nn.Linear(in_features=dim, out_features=21)
         self.z_estimation_r = nn.Linear(in_features=dim, out_features=21)
-        # self.z_estimation = nn.Linear(in_features=dim, out_features=42)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass
