@@ -5,6 +5,7 @@ import torch.nn as nn
 import numpy as np
 import numpy as np
 import torch
+from utils.general_utils import heatmaps_to_coordinates_tensor
 
 CAM_INTRS = np.array([[636.6593017578125, 0.00000000e+00, 635.283881879317],
                       [0.00000000e+00, 636.251953125, 366.8740353496978],
@@ -32,36 +33,6 @@ def project_points_2D_to_3D(xyz: torch.Tensor, K: torch.Tensor) -> torch.Tensor:
         0), xy.transpose(-2, -1)).transpose(-2, -1)
     xyz *= z
     return xyz
-
-
-def heatmaps_to_coordinates_tensor(heatmaps: torch.Tensor, num_kpts, img_size: int) -> torch.Tensor:
-    """
-    Transforms heatmaps to 2d keypoints
-
-    Args:
-        heatmaps (torch.Tensor): Input heatmap
-
-    Returns:
-        torch.Tensor: Output points
-    """
-    batch_size = heatmaps.shape[0]
-    sums = heatmaps.sum(dim=-1).sum(dim=-1)
-
-    sums = sums.unsqueeze(-1).unsqueeze(-1)
-    normalized = heatmaps / sums
-
-    x_prob = normalized.sum(dim=2)
-    y_prob = normalized.sum(dim=3)
-
-    arr = torch.arange(0, img_size, device=heatmaps.device).float().repeat(
-        batch_size, num_kpts, 1)
-
-    x = (arr * x_prob).sum(dim=2)
-    y = (arr * y_prob).sum(dim=2)
-
-    keypoints = torch.stack([x, y], dim=-1)
-
-    return keypoints / img_size
 
 
 class DeconvolutionLayer2(nn.Module):
@@ -190,3 +161,38 @@ class CustomEgocentric3D_zsep(nn.Module):
             ret_dict['kpts2d_img'] = kpts2d_img
 
         return ret_dict
+
+
+def count_parameters(model: nn.Module) -> int:
+    """
+    Counts parameters for training in a given model.
+
+    Args:
+        model (nn.Module): Input model
+
+    Returns:
+        int: No. of trainable parameters
+    """
+
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def make_model(model_cfg, device='cpu', parameter_info=True):
+
+    ModelClass = globals()[model_cfg.model_type]
+    model = ModelClass()
+
+    model = model.to(device)
+
+    print(f'Model created on device: {device}')
+
+    # If loading weights from checkpoin
+    if model_cfg.load_model:
+        model.load_state_dict(torch.load(
+            model_cfg.load_model_path, map_location=torch.device(device)))
+        print("Model's checkpoint loaded")
+
+    if parameter_info:
+        print('Number of parameters to learn:', count_parameters(model))
+
+    return model

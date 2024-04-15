@@ -5,9 +5,10 @@ from spock_dataclasses import *
 import wandb
 import yaml
 from albumentations.pytorch.transforms import ToTensorV2
-from utils.general_utils import make_model, make_optimiser, freeze_seeds, set_max_cpu_threads
+from utils.general_utils import make_optimiser, freeze_seeds, set_max_cpu_threads
 from utils import loses
 from datasets.h2o import get_h2o_dataloaders
+from models.models import make_model
 
 
 def main() -> None:
