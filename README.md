@@ -3,14 +3,41 @@
 <!-- ![SHARP](./images/icpr_qualitative.png) -->
 <img src="./images/icpr_qualitative.png" width="1000">
 
-Implementation of the *SHARP* paper:
+# Table of Contents
+- [Abstract](#abstract)
+- [Usage](#usage)
+  - [Hand Pose Inference with *SHARP*](#subsection-a)
+  - [Action Recognition Inference](#subsection-b)
+- [Weights](#weights)
+  - [*SHARP* Hand Pose Model Weights](#subsection-a)
+  - [Action Recognition Model Weights](#subsection-b)
 
 
-## Requirements
+
+
+# Abstract
+
+>*Hand pose represents key information for action recognition
+in the egocentric perspective, where the user is interacting with
+objects. We propose to improve egocentric 3D hand pose estimation
+based on RGB frames only by using pseudo-depth images. Incorporating
+state-of-the-art single RGB image depth estimation techniques, we
+generate pseudo-depth representations of the frames and use distance
+knowledge to segment irrelevant parts of the scene. The resulting depth
+maps are then used as segmentation masks for the RGB frames. Experimental
+results on H2O Dataset confirm the high accuracy of the
+estimated pose with our method in an action recognition task. The 3D
+hand pose, together with information from object detection, is processed
+by a transformer-based action recognition network, resulting in an accuracy
+of 91.73%, outperforming all state-of-the-art methods. Estimations
+of 3D hand pose result in competitive performance with existing methods
+with a mean pose error of 28.66 mm. This method opens up new
+possibilities for employing distance information in egocentric 3D hand
+pose estimation without relying on depth sensors.*
 
 
 
-The file explorer is accessible using the button in left corner of the navigation bar. You can create a new file by clicking the **New file** button in the file explorer. You can also create folders by clicking the **New folder** button.
+# Usage:
 
 ## Hand Pose Inference with *SHARP*
 
@@ -26,14 +53,14 @@ The file explorer is accessible using the button in left corner of the navigatio
 
 You can rename the current file by clicking the file name in the navigation bar or by clicking the **Rename** button in the file explorer.
 
-## Weights
+# Weights
 
 ### SHARP Hand Pose Model Weights:
->[SHARP 3D Hand Pose Estimation Model Weights](https://cloud.cvl.tuwien.ac.at/s/xQZs8JiaDnqcL5d)
+>[*SHARP* 3D Hand Pose Estimation Model Weights](https://cloud.cvl.tuwien.ac.at/s/xQZs8JiaDnqcL5d)
 
->[SHARP 3D Hand Pose Estimation with Oracle Grund Truth Model Weights](https://cloud.cvl.tuwien.ac.at/s/WbE7eaf2fzfaSNe)
+>[*SHARP* 3D Hand Pose Estimation with Oracle Grund Truth Model Weights](https://cloud.cvl.tuwien.ac.at/s/WbE7eaf2fzfaSNe)
 
->[None-SHARP 3D Hand Pose Estimation Model Weights](https://cloud.cvl.tuwien.ac.at/s/dyzAY3swx3HjWBs)
+>[*None-SHARP* 3D Hand Pose Estimation Model Weights](https://cloud.cvl.tuwien.ac.at/s/dyzAY3swx3HjWBs)
 
 ### Action Recognition Model Weights:
 >Link to weights
