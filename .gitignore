@@ -5,3 +5,6 @@ __pycache__/spock_dataclasses.cpython-310.pyc
 /utils/__pycache__
 /models/__pycache__
 /datasets/__pycache__
+__pycache__/spock_dataclasses_ar.cpython-310.pyc
+action_labels.json
+answear.zip

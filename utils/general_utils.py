@@ -152,6 +152,17 @@ def make_optimiser(model, training_cfg):
     return optimiser
 
 
+def define_optimizer(model, optimizer_cfg):
+
+    if optimizer_cfg.type == 'SGD':
+        optimizer = optim.SGD(model.parameters(
+        ), lr=optimizer_cfg.lr, weight_decay=optimizer_cfg.weight_decay, momentum=optimizer_cfg.momentum)
+    elif optimizer_cfg.type == 'AdamW':
+        optimizer = optim.AdamW(
+            model.parameters(), lr=optimizer_cfg.lr, weight_decay=optimizer_cfg.weight_decay)
+    return optimizer
+
+
 def draw_keypoints_on_single_hand(pts, linewidth=1, colormap=None):
 
     pts_draw = pts.copy()

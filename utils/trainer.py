@@ -10,6 +10,7 @@ import os
 import cv2 as cv2
 from utils.testing import batch_epe_calculation
 import random
+import json
 
 
 DEBUG = True
@@ -46,6 +47,251 @@ def save_best_model(model, run_name, new_value: float, best_value, save_on_type:
                        f'checkpoints/{run_name}/checkpoint_best.pth')
 
     return best_value_ret
+
+
+class TrainerAR:
+    """
+    Class for training the model
+    """
+
+    def __init__(self, model: torch.nn.Module, criterion: torch.nn.Module, optimizer: torch.optim, training_config, model_config, wandb_logger: wandb = None, scheduler: torch.optim = None, grad_clip: int = None) -> None:
+        """
+        Initialisation
+        Args:
+            model (torch.nn.Module): Input modle used for training
+            criterion (torch.nn.Module): Loss function
+            optimizer (torch.optim): Optimiser
+            config (dict): Config dictionary (needed max epochs and device)
+            scheduler (torch.optim, optional): Learning rate scheduler. Defaults to None.
+            grad_clip (int, optional): Gradient clipping. Defaults to None.
+        """
+        self.model = model
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.loss = {"train": [], "val": [], "test": []}
+        self.epochs = training_config.max_epochs
+        self.device = training_config.device
+        self.scheduler = scheduler
+        self.early_stopping_epochs = training_config.early_stopping
+        self.early_stopping_avg = 10
+        self.early_stopping_precision = 5
+        self.best_val_loss = 100000
+        self.best_acc_val = 0
+        self.grad_clip = grad_clip
+        self.wandb_logger = wandb_logger
+        self.acc_val = []
+        self.acc_test = []
+        self.emplying_objs = training_config.emplying_objs
+        self.pth_to_save_chkpt = training_config.checkpoint_pth
+        self.softmax = nn.Softmax(dim=1)
+
+    def train(self, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader) -> torch.nn.Module:
+        """
+        Training loop
+        Args:
+            train_dataloader (torch.utils.data.DataLoader): Training dataloader
+            val_dataloader (torch.utils.data.DataLoader): Validation dataloader
+        Returns:
+            torch.nn.Module: Trained model
+        """
+        for epoch in range(self.epochs):
+            self._epoch_train(train_dataloader)
+            self._epoch_eval(val_dataloader)
+            print(
+                "Epoch: {}/{}, Train Loss={}, Val Loss={}, Val Acc={}".format(
+                    epoch + 1,
+                    self.epochs,
+                    np.round(self.loss["train"][-1], 10),
+                    np.round(self.loss["val"][-1], 10),
+                    self.acc_val[-1],
+                )
+            )
+
+            # reducing LR if no improvement in training
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+            self.__save_best_model(acc_val=np.round(
+                self.acc_val[-1], 10), epoch=epoch, pth_to_save=self.pth_to_save_chkpt)
+
+            self.__save_best_model_val(val_loss=np.round(
+                self.loss["val"][-1], 10), epoch=epoch, pth_to_save=self.pth_to_save_chkpt)
+
+            # early stopping if no progress
+            if epoch < self.early_stopping_avg:
+                min_val_loss = np.round(
+                    np.mean(self.loss["val"]), self.early_stopping_precision)
+                no_decrease_epochs = 0
+
+            else:
+                val_loss = np.round(
+                    np.mean(self.loss["val"][-self.early_stopping_avg:]),
+                    self.early_stopping_precision
+                )
+                if val_loss >= min_val_loss:
+                    no_decrease_epochs += 1
+                else:
+                    min_val_loss = val_loss
+                    no_decrease_epochs = 0
+
+            self.wandb_logger.log(
+                {"acc": self.acc_val[-1],
+                 "train_loss": np.round(
+                    self.loss["train"][-1], 10),
+                    "val_loss": np.round(self.loss["val"][-1], 10),
+                    "best_acc": self.best_acc_val,
+                 })
+
+            if no_decrease_epochs > self.early_stopping_epochs:
+                print("Early Stopping")
+                break
+
+        return self.model
+
+    def _epoch_train(self, dataloader: torch.utils.data.DataLoader):
+        """
+        Training step in epoch
+        Args:
+            dataloader (torch.utils.data.DataLoader): Dataloader
+        """
+        self.model.train()
+        running_loss = []
+
+        for i, data in enumerate(tqdm(dataloader, 0)):
+
+            inputs = data['positions'].to(
+                self.device).type(torch.cuda.FloatTensor)
+
+            labels = data['action_label'].to(self.device)
+            self.optimizer.zero_grad()
+
+            outputs = self.model(inputs)
+
+            loss = self.criterion(outputs, labels)
+            loss.backward()
+
+            if self.grad_clip > 0:
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), self.grad_clip)
+
+            self.optimizer.step()
+
+            running_loss.append(loss.item()*labels.shape[0])
+
+        epoch_loss = sum(running_loss)/len(dataloader.dataset)
+        self.loss["train"].append(epoch_loss)
+
+    def test_model(self, test_dataloader: torch.utils.data.DataLoader):
+        self.__evaluation(dataloader=test_dataloader,
+                          loss_list=self.loss["test"], acc_list=self.acc_test)
+        print('Acc: ', self.acc_test[-1], ' Loss: ', self.loss["test"][-1])
+
+    def __evaluation(self, dataloader: torch.utils.data.DataLoader, loss_list, acc_list):
+
+        self.model.eval()
+        running_loss = []
+        Accuracy = metrics.Accuracy(
+            task="multiclass", num_classes=36).to(self.device)
+        acc_lst = []
+
+        with torch.no_grad():
+
+            for i, data in enumerate(dataloader, 0):
+
+                inputs = data['positions'].to(
+                    self.device).type(torch.cuda.FloatTensor)
+
+                labels = data['action_label'].to(self.device)
+
+                outputs = self.model(inputs)
+                loss = self.criterion(outputs, labels)
+                running_loss.append(loss.item()*labels.shape[0])
+                prob = self.softmax(outputs)
+                acc = Accuracy(prob, labels)
+
+                acc_lst.append(acc*labels.shape[0])
+            epoch_loss = sum(running_loss)/len(dataloader.dataset)
+            loss_list.append(epoch_loss)
+            accuracy = sum(acc_lst)/len(dataloader.dataset)
+            acc_list.append(accuracy.cpu().numpy())
+
+    def test_h2o(self, dataloader: torch.utils.data.DataLoader):
+
+        self.model.eval()
+
+        h2o_test_results = {
+            "modality": "hand+obj",
+        }
+        with torch.no_grad():
+
+            for i, data in enumerate(dataloader, 0):
+
+                inputs = data['positions'].to(
+                    self.device).type(torch.cuda.FloatTensor)
+
+                outputs = self.model(inputs)
+                prob = self.softmax(outputs)
+                # In prob of shape 64, 36 pick the highest value in each row
+
+                indxs = torch.argmax(prob, dim=1)
+
+                for key, value in zip(data['action_id'], indxs):
+                    h2o_test_results[int(key)] = int(value) + 1
+
+            print(f'Len of dict: {len(h2o_test_results)}')
+            with open("action_labels.json", "w") as fp:
+                json.dump(h2o_test_results, fp)
+
+            # if answear.zip exists, remove it
+            if os.path.exists('answear.zip'):
+                os.system('rm answear.zip')
+            os.system('zip answear.zip action_labels.json')
+            return h2o_test_results
+
+    def _epoch_eval(self, dataloader: torch.utils.data.DataLoader):
+        """
+        Evaluation step in epoch
+        Args:
+            dataloader (torch.utils.data.DataLoader): Dataloader
+        """
+        self.__evaluation(dataloader=dataloader,
+                          loss_list=self.loss["val"], acc_list=self.acc_val)
+
+    def __save_best_model(self, acc_val: float, epoch: int, pth_to_save: str):
+        """
+        Saves best model
+        Args:
+            val_loss (float): Current validation loss
+            epoch (int): Current epoch
+        """
+
+        # Check if folder named wandb.run.name exists, if not, create the folder
+        if not os.path.exists(f'checkpoints/{self.wandb_logger.name}'):
+            os.makedirs(f'checkpoints/{self.wandb_logger.name}')
+
+        if acc_val >= self.best_acc_val:
+            self.best_acc_val = acc_val
+            print("Saving best model..")
+            torch.save(self.model.state_dict(),
+                       f'checkpoints/{self.wandb_logger.name}/checkpoint_best.pth')
+
+    def __save_best_model_val(self, val_loss: float, epoch: int, pth_to_save: str):
+        """
+        Saves best model
+        Args:
+            val_loss (float): Current validation loss
+            epoch (int): Current epoch
+        """
+
+        # Check if folder named wandb.run.name exists, if not, create the folder
+        if not os.path.exists(f'checkpoints/{self.wandb_logger.name}'):
+            os.makedirs(f'checkpoints/{self.wandb_logger.name}')
+
+        if val_loss < self.best_val_loss:
+            self.best_val_loss = val_loss
+            print("Saving best model..")
+            torch.save(self.model.state_dict(),
+                       f'checkpoints/{self.wandb_logger.name}/checkpoint_best_val_loss.pth')
 
 
 class Trainer3D:
@@ -254,8 +500,6 @@ class Trainer3D:
         correct_right = 0
         epe_2d_left = []
         epe_2d_right = []
-        epe_3d_root_l = []
-        epe_3d_root_r = []
 
         with torch.no_grad():
             for i, data in enumerate(tqdm(dataloader, 0)):
@@ -357,8 +601,6 @@ class Trainer3D:
             acc = sum(acc_lst)/len(dataloader.dataset)
             epe_3d_left = sum(epe_3d_left)/correct_left
             epe_3d_right = sum(epe_3d_right)/correct_right
-            epe_3d_root_l_mean = sum(epe_3d_root_l)/correct_left
-            epe_3d_root_r_mean = sum(epe_3d_root_r)/correct_right
             epe_2d_left = sum(epe_2d_left)/correct_left
             epe_2d_right = sum(epe_2d_right)/correct_right
 

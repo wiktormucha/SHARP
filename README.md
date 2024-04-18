@@ -42,12 +42,29 @@ pose estimation without relying on depth sensors.*
 ## Hand Pose Inference with *SHARP*
 
  - Download *H2O Dataset* from project page: https://taeinkwon.com/projects/h2o/
- - For using *SHARP* generate pseudo-depth images running script *generate_depth_h2o.py*
- - For not using *SHARP* *set use_depth: **False** in *config_h2o_3D_test.yaml*
- - For using SHARP with oracle ground truth data set use_depth: **True**  and *depth_img_type: **'gt'*** in *config_h2o_3D_test.yaml*
+ - Install *DPT-Hybrid* from: https://huggingface.co/docs/transformers/model_doc/dpt 
+ - For using *SHARP* generate pseudo-depth images running script:
+
+```bash
+python generate_depth_h2o.py
+```
+ 
+ - For not using *SHARP* set *config_h2o_3D_test.yaml*:
+
+```yaml
+use_depth: False
+```
+ - For using SHARP with oracle ground truth data set config_h2o_3D_test.yaml:
+```yaml
+use_depth: True
+depth_img_type: 'gt'
+```
+
  - Setup config file for testing *config_h2o_3D_test.yaml* with a path to downloaded weights and path to dataset
  - Run command:
-	 >python test_pose.py -c cfgs/config_h2o_3d_test.yaml
+```bash
+python test_pose.py -c cfgs/config_h2o_3d_test.yaml
+```
 
 ## Action Recognition Inference
 
