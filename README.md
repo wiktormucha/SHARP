@@ -101,5 +101,5 @@ checkpoint_path: 'your path to downloaded checkpoint'
 >[*None-SHARP* 3D Hand Pose Estimation Model Weights](https://cloud.cvl.tuwien.ac.at/s/dyzAY3swx3HjWBs)
 
 ### Action Recognition Model Weights:
->Link to weights
+>[Action Recognition with *SHARP* hand pose](https://cloud.cvl.tuwien.ac.at/s/pXBqjMRz2Qk4zG8)
 
