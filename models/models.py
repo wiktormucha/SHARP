@@ -5,6 +5,7 @@ from utils.general_utils import heatmaps_to_coordinates_tensor, project_points_2
 from datasets.h2o import CAM_INTRS
 import numpy as np
 
+
 def get_positional_embeddings(sequence_lenght, d, device, freq=10000):
     result = torch.ones(sequence_lenght, d)
     for i in range(sequence_lenght):
@@ -19,7 +20,7 @@ class TransformerEncoder(nn.Module):
     def __init__(self, embed_dim, seq_length, num_heads, dropout, dropout_att):
 
         super(TransformerEncoder, self).__init__()
-        print(f'Embedding dimmension {embed_dim}')
+
         self.MultHeaAtten = torch.nn.MultiheadAttention(
             embed_dim=embed_dim, num_heads=num_heads, batch_first=True, dropout=dropout_att)
 
@@ -48,27 +49,20 @@ class TransformerEncoder(nn.Module):
         # Calculating self attention
         attn_output, attn_output_weights = self.MultHeaAtten(
             query=x, key=x, value=x, key_padding_mask=None)
-        # apply layer normalization on sum of the input and the attention output to get the
-        # output of the multi-head attention layer (~1 line)
         out1 = self.layer_norm_1(attn_output + x)
-        # pass the output of the multi-head attention layer through a ffn (~1 line)
-        # (batch_size, input_seq_len, fully_connected_dim)
         ffn_output = self.ffn(out1)
 
-        # apply layer normalization on sum of the output from multi-head attention and ffn output to get the
-        # output of the encoder layer (~1 line)
         enc_out = self.layer_norm_2(out1 + ffn_output)
         enc_out = self.dropout(enc_out)
 
         return enc_out
 
 
-class TransfomerKeypoints_loop_NoLinear(nn.Module):
+class Hand3DActionTransformer(nn.Module):
     def __init__(self, model_cfg, input_dim=126, out_dim=37, hidden_d=126, device=0) -> None:
         super().__init__()
 
         input_dim = model_cfg.input_dim
-        # hidden_layers =
         out_dim = model_cfg.out_dim
         dropout = model_cfg.dropout
         dropout_att = model_cfg.dropout_att
@@ -79,75 +73,43 @@ class TransfomerKeypoints_loop_NoLinear(nn.Module):
         self.seq_length = model_cfg.seq_length
         self.device = device
 
-        self.input_norm = nn.LayerNorm(135)
-
-        # 1) Linear mapper
-        # self.input_d = int(chw[0] * self.patch_size[0] * self.patch_size[1])
+        self.input_norm = nn.LayerNorm(input_dim)
         self.linear_mapper = nn.Linear(input_dim, self.hidden_layers)
-        # self.linear_mapper = nn.Sequential(nn.Linear(input_dim, self.hidden_layers),
-        #                                    nn.Dropout(0.1),
-        #                                    )
-        # 2) Learnable classifiation token
-        # self.class_token = nn.Parameter(torch.rand(1, self.hidden_layers))
-        self.class_token = nn.Parameter(torch.rand(1, input_dim))
 
-        # self.encoder_layers = [TransformerEncoder(
-        #     embed_dim=self.hidden_layers, seq_length=self.seq_length, num_heads=num_heads, dropout=dropout, dropout_att=dropout_att).to(device) for _ in range(self.num_layers)]
+        self.class_token = nn.Parameter(torch.rand(1, input_dim))
         self.encoder_layers = nn.ModuleList()
-        # for _ in range(self.num_layers):
-        #     self.encoder_layers.append(TransformerEncoder(
-        #         embed_dim=self.hidden_layers, seq_length=self.seq_length, num_heads=num_heads, dropout=dropout, dropout_att=dropout_att).to(device))
+
         for _ in range(self.num_layers):
             self.encoder_layers.append(TransformerEncoder(
                 embed_dim=input_dim, seq_length=self.seq_length, num_heads=num_heads, dropout=dropout, dropout_att=dropout_att).to(device))
-        # 6) CLassification MLP
+
         self.mlp = nn.Sequential(
             nn.Dropout(model_cfg.dropout_mlp),
-            nn.LayerNorm(136),
-            nn.Linear(136, out_dim),
-            # nn.Softmax(dim=-1)
+            nn.LayerNorm(input_dim+1),
+            nn.Linear(input_dim+1, out_dim),
         )
 
     def forward(self, x):
 
         batch_s, _, _ = x.shape
-        # 1 Lineralize
-        # print(x.shape)
+
         obj_label = x[:, :, -1]
         obj_label = obj_label[:, 0].reshape(batch_s, 1)
-        # print(f'obj label: {obj_label.shape}')
-        # print(f'obj label1: {obj_label[0]}')
-        # print(f'obj label2: {obj_label[1]}')
-        tokens = self.linear_mapper(x)
-        # tokens = self.input_norm(x)
-        # print(x.shape)
 
-        # Adding classification token to the tokens
+        tokens = self.linear_mapper(x)
+
         tokens = torch.stack(
             [torch.vstack((self.class_token, tokens[i])) for i in range(len(tokens))])
 
-        # Adding positional embedding
-        # tokens += get_positional_embeddings(self.seq_length+1,
-        #                                     self.hidden_layers, device=self.device).repeat(batch_s, 1, 1)
         tokens += get_positional_embeddings(self.seq_length+1,
-                                            135, device=self.device).repeat(batch_s, 1, 1)
-        # Encoder block
+                                            self.hidden_layers, device=self.device).repeat(batch_s, 1, 1)
         x = tokens
 
-        # for i in range(self.num_layers):
-        #     x = self.encoder_layers[i](x)
-        # Encoder block
         for blk in self.encoder_layers:
             x = blk(x)
 
         out = x[:, 0]
-        # return x
-
-        # obj = obj.reshape(batch_s, 1)
-
-        # Merging with object label
         out = torch.cat((out, obj_label), dim=1)
-        # print(f'out: {out.shape}')
         out = self.mlp(out)
 
         return out

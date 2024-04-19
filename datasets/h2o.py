@@ -153,9 +153,11 @@ class H2O_Dataset_hand_train_3D(Dataset):
             keypoints = np.array(transformed['keypoints'])
 
             if self.subset_type == "train":
-                transforms = transformed['replay']["transforms"][0]["transforms"]
-                horizontal_flip_flag = transforms[0]["applied"]
-                vertical_flip_flag = transforms[1]["applied"]
+                # Make it work only if it exists in transforms
+                if "replay" in transformed and "transforms" in transformed['replay'] and "transforms" in transformed['replay'] in transformed['replay']["transforms"][0]:
+                    transforms = transformed['replay']["transforms"][0]["transforms"]
+                    horizontal_flip_flag = transforms[0]["applied"]
+                    vertical_flip_flag = transforms[1]["applied"]
 
             else:
                 horizontal_flip_flag = False
@@ -687,3 +689,30 @@ def sample2(input_frames: list, no_of_outframes, sampling_type: str):
             np.arange(0, no_of_outframes) * len(input_frames)/no_of_outframes).astype(int)
 
     return indxs_to_sample
+
+
+class YoloLabel:
+    label: int
+    xc: float
+    yc: float
+    width: float
+    height: float
+
+
+def read_yolo_labels(yolo_labels: pd.DataFrame, bb_factor=1):
+    ret_dict = {}
+    for idx, row in yolo_labels.iterrows():
+        temp_obj = YoloLabel()
+        # row = row[0]
+        temp_obj.label = int(row[0])
+        temp_obj.xc = float(row[1])
+        temp_obj.yc = float(row[2])
+        temp_obj.width = float(row[3]) * bb_factor
+        temp_obj.height = float(row[4]) * bb_factor
+
+        if temp_obj.label not in ret_dict:
+            ret_dict[temp_obj.label] = [temp_obj]
+        else:
+            ret_dict[temp_obj.label].append(temp_obj)
+
+    return ret_dict

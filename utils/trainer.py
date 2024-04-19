@@ -11,7 +11,7 @@ import cv2 as cv2
 from utils.testing import batch_epe_calculation
 import random
 import json
-
+import torchvision.transforms.v2 as v2
 
 DEBUG = True
 # DEBUG = False
@@ -54,7 +54,7 @@ class TrainerAR:
     Class for training the model
     """
 
-    def __init__(self, model: torch.nn.Module, criterion: torch.nn.Module, optimizer: torch.optim, training_config, model_config, wandb_logger: wandb = None, scheduler: torch.optim = None, grad_clip: int = None) -> None:
+    def __init__(self, model: torch.nn.Module, criterion: torch.nn.Module, optimizer: torch.optim, training_config, wandb_logger: wandb = None, scheduler: torch.optim = None) -> None:
         """
         Initialisation
         Args:
@@ -77,7 +77,6 @@ class TrainerAR:
         self.early_stopping_precision = 5
         self.best_val_loss = 100000
         self.best_acc_val = 0
-        self.grad_clip = grad_clip
         self.wandb_logger = wandb_logger
         self.acc_val = []
         self.acc_test = []
@@ -169,10 +168,6 @@ class TrainerAR:
 
             loss = self.criterion(outputs, labels)
             loss.backward()
-
-            if self.grad_clip > 0:
-                torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), self.grad_clip)
 
             self.optimizer.step()
 

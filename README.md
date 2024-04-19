@@ -68,7 +68,28 @@ python test_pose.py -c cfgs/config_h2o_3d_test.yaml
 
 ## Action Recognition Inference
 
-You can rename the current file by clicking the file name in the navigation bar or by clicking the **Rename** button in the file explorer.
+To run inference using ground truth poses set up the config file *ar_inference.yaml*:
+
+```yaml
+hand_pose_type: 'gt_hand_pose'
+load_checkpoint: True
+checkpoint_path: 'your path to downloaded checkpoint'
+```
+>To get results on test subset, the script generates .zip file that has to be submitted to codelab challange: https://codalab.lisn.upsaclay.fr/competitions/4820 
+
+To rget *SHARP* hand pose estimations:
+
+```bash
+python get_3D_pose.py --path "path to dataset" --imgs_path "path to imgs in dataset" --use_depth True --device 1 --load_model True --load_model_path "path to SHARP weights"
+```
+
+Re-run inference with *SHARP* weights
+
+```yaml
+hand_pose_type: 'hand_pose_3d_own_masked'
+load_checkpoint: True
+checkpoint_path: 'your path to downloaded checkpoint'
+```
 
 # Weights
 
