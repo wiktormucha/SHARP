@@ -77,13 +77,18 @@ checkpoint_path: 'your path to downloaded checkpoint'
 ```
 >To get results on test subset, the script generates .zip file that has to be submitted to codelab challange: https://codalab.lisn.upsaclay.fr/competitions/4820 
 
-To rget *SHARP* hand pose estimations:
+To get *SHARP* hand pose estimations:
 
 ```bash
 python get_3D_pose.py --path "path to dataset" --imgs_path "path to imgs in dataset" --use_depth True --device 1 --load_model True --load_model_path "path to SHARP weights"
 ```
+To get Yolo Object Detection for H2O please follow our second [repository](https://github.com/wiktormucha/SHARP) and update config from 'GT' to Yolov7
 
-Re-run inference with *SHARP* weights
+```yaml
+obj_pose_type: 'YoloV7'
+```
+
+To Re-run inference with *SHARP* weights
 
 ```yaml
 hand_pose_type: 'hand_pose_3d_own_masked'
