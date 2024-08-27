@@ -3,6 +3,8 @@
 <!-- ![SHARP](./images/icpr_qualitative.png) -->
 <img src="./images/icpr_qualitative.png" width="1000">
 
+[![View on arXiv](https://img.shields.io/badge/arXiv-2408.10037-b31b1b.svg)](https://arxiv.org/abs/2408.10037)
+
 # Table of Contents
 - [Abstract](#abstract)
 - [Usage](#usage)
@@ -108,3 +110,16 @@ checkpoint_path: 'your path to downloaded checkpoint'
 ### Action Recognition Model Weights:
 >[Action Recognition with *SHARP* hand pose](https://cloud.cvl.tuwien.ac.at/s/pXBqjMRz2Qk4zG8)
 
+
+# Bibtex
+
+If you find this work useful or the models in your research or applications, please cite the paper using this BibTeX
+
+```BibTeX
+@article{mucha2024sharp,
+  title={SHARP: Segmentation of Hands and Arms by Range using Pseudo-Depth for Enhanced Egocentric 3D Hand Pose Estimation and Action Recognition},
+  author={Mucha, Wiktor and Wray, Michael and Kampel, Martin},
+  journal={arXiv preprint arXiv:2408.10037},
+  year={2024}
+}
+```
