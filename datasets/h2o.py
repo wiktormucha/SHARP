@@ -154,14 +154,17 @@ class H2O_Dataset_hand_train_3D(Dataset):
 
             if self.subset_type == "train":
                 # Make it work only if it exists in transforms
-                if "replay" in transformed and "transforms" in transformed['replay'] and "transforms" in transformed['replay'] in transformed['replay']["transforms"][0]:
-                    transforms = transformed['replay']["transforms"][0]["transforms"]
-                    horizontal_flip_flag = transforms[0]["applied"]
-                    vertical_flip_flag = transforms[1]["applied"]
+               # ...existing code...
+                if "replay" in transformed and "transforms" in transformed['replay']:
+                    transforms = transformed['replay']["transforms"]
+                    if "transforms" in transforms[0]:
+                        horizontal_flip_flag = transforms[0]["applied"]
+                        vertical_flip_flag = transforms[1]["applied"]
+# ...existing code...
 
-            else:
-                horizontal_flip_flag = False
-                vertical_flip_flag = False
+                    else:
+                        horizontal_flip_flag = False
+                        vertical_flip_flag = False
 
         else:
             img = img
